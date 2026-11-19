@@ -1,0 +1,21 @@
+import { env } from "cloudflare:workers";
+import { createServerFn } from "@tanstack/react-start";
+import { ConfigurationError, gatewayUrl, isAdmin } from "@every-app/sdk/server";
+import { ensureUserMiddleware } from "@every-app/sdk/tanstack-start";
+
+/**
+ * The Gateway's origin: the way back to the other apps, and the host the
+ * light/dark cookie is set on. Null when the Worker has no GATEWAY_URL.
+ * Also whether the viewer is an admin, for the navigation.
+ */
+export const getGatewayUrl = createServerFn()
+  .middleware([ensureUserMiddleware])
+  .handler(({ context }) => {
+    const admin = isAdmin(context.user);
+    try {
+      return { gatewayUrl: new URL(gatewayUrl(env)).origin, admin };
+    } catch (error) {
+      if (!(error instanceof ConfigurationError)) throw error;
+      return { gatewayUrl: null, admin };
+    }
+  });
